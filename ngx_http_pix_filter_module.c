@@ -19,6 +19,7 @@
 #define NGX_HTTP_IMAGE_CROP      4
 #define NGX_HTTP_IMAGE_ROTATE    5
 #define NGX_HTTP_IMAGE_PIXELATE  6
+#define NGX_HTTP_IMAGE_PROXY     7
 
 
 #define NGX_HTTP_IMAGE_START     0
@@ -552,8 +553,12 @@ ngx_http_image_process(ngx_http_request_t *r)
         return ngx_http_image_json(r, rc == NGX_OK ? ctx : NULL);
     }
 
-    ctx->angle = ngx_http_pix_filter_get_value(r, conf->acv, conf->angle);
+    if (conf->filter == NGX_HTTP_IMAGE_PROXY) {
 
+        return ngx_http_image_resize(r, ctx);
+    }
+
+    ctx->angle = ngx_http_pix_filter_get_value(r, conf->acv, conf->angle);
     if (conf->filter == NGX_HTTP_IMAGE_ROTATE) {
 
         if (ctx->angle != 90 && ctx->angle != 180 && ctx->angle != 270) {
@@ -909,6 +914,10 @@ transparent:
 
         resize = 0;
 
+    } else if (conf->filter == NGX_HTTP_IMAGE_PROXY) {
+
+        resize = 0;
+
     } else if (conf->filter == NGX_HTTP_IMAGE_PIXELATE) {
 
         resize = 0;
@@ -1007,6 +1016,10 @@ transparent:
 
     if (conf->filter == NGX_HTTP_IMAGE_PIXELATE) {
 	src = dst;
+    }
+
+    if (conf->filter == NGX_HTTP_IMAGE_PROXY) {
+    src = dst;
     }
 
     if (conf->filter == NGX_HTTP_IMAGE_CROP) {
@@ -1414,6 +1427,9 @@ ngx_http_pix_filter(ngx_conf_t *cf, ngx_command_t *cmd, void *conf)
 
         } else if (ngx_strcmp(value[i].data, "test") == 0) {
             imcf->filter = NGX_HTTP_IMAGE_TEST;
+
+        } else if (ngx_strcmp(value[i].data, "proxy") == 0) {
+            imcf->filter = NGX_HTTP_IMAGE_PROXY;
 
         } else if (ngx_strcmp(value[i].data, "size") == 0) {
             imcf->filter = NGX_HTTP_IMAGE_SIZE;
